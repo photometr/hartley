@@ -4,6 +4,8 @@
 import math
 
 N = 2
+date = "9"
+tetacam = 0
 deginpix = 0.000366
 
 class Star():
@@ -43,9 +45,9 @@ def parseline(line):
   flux = 10**(-0.4*mag)
   return (x,y,mag,magerr,flux,fwhm)
 
-def getdata(n):
+def getdata(fname):
   st = Star()
-  fop = open("mag000"+str(n)+".dat",'r')
+  fop = open(fname,'r')
   line = fop.readline()
   st.x1,st.y1,st.mag1,st.magerr1,st.flux1,st.fwhm1 = parseline(line)
   line = fop.readline()
@@ -53,8 +55,8 @@ def getdata(n):
   fop.close()
   return st
 
-def process(n):
-  st = getdata(n)
+def process(fname):
+  st = getdata(fname)
   mag = math.log10(0.5*(st.flux1 + st.flux2))
   pol = 100*(st.flux1 - st.flux2)/(st.flux1 + st.flux2)
   flerr1 = (10**(-0.4*st.mag1) - 10**(-0.4*(st.mag1+st.magerr1)))/st.flux1
@@ -64,23 +66,23 @@ def process(n):
   st.calcang()
   return st.x1,st.y1,st.x2,st.y2,mag,pol,flerr,st.dist,st.ang,st.fwhm1,st.fwhm2
 
-def out(stars):
-  fop = open("stand.dat",'w')
+def out(stars,filt):
+  fop = open(filt+".dat",'w')
   for output in stars:
-    fop.write(str(output[0])+" ")
-    fop.write(str(output[1])+" ")
-    fop.write(str(output[2])+" ")
-    fop.write(str(output[3])+" ")
-    fop.write(str(output[4])+" ")
-    fop.write(str(output[5])+" ")
-    fop.write(str(output[6])+" ")
-    fop.write(str(output[7])+" ")
-    fop.write(str(output[8])+" ")
-    fop.write(str(output[9])+" ")
-    fop.write(str(output[10])+"\n")
+    fop.write(str(output[0])+" ")#x1
+    fop.write(str(output[1])+" ")#y1
+    fop.write(str(output[2])+" ")#x2
+    fop.write(str(output[3])+" ")#y2
+    fop.write(str(output[4])+" ")#mag
+    fop.write(str(output[5])+" ")#pol
+    fop.write(str(output[6])+" ")#flerr
+    fop.write(str(output[7])+" ")#dist
+    fop.write(str(output[8])+" ")#ang
+    fop.write(str(output[9])+" ")#fwhm1
+    fop.write(str(output[10])+"\n")#fwhm2
   fop.close()
 
-def calcmean(stars):
+def calcmean(stars,comet,filt):
   pmean = 0
   fwhm1mean = 0
   fwhm2mean = 0
@@ -96,21 +98,65 @@ def calcmean(stars):
     sigma = sigma + (pmean - star[5])**2 #Maybe wrong in polpar4.bas str.35
   sigma = math.sqrt(sigma/len(stars))
   sigma = sigma/math.sqrt(len(stars))
-  fop = open("1.dat",'w')
-  fop.write(str(pmean)+" ")
+  flerr = comet[0][6]
+  pol = comet[0][5]
+  sigma1 = math.sqrt(sigma**2 + flerr**2)
+  pol = pol - pmean
+
+  fop = open(filt+"1.dat",'w')
+  fop.write(str(comet[0][4])+" ")
+  fop.write(str(pol)+" ")
   fop.write(str(sigma)+" ")
+  fop.write(str(sigma1)+" ")
   fop.write(str(fwhm1mean)+" ")
   fop.write(str(fwhm2mean)+" ")
   fop.close()
-  return pmean,sigma,fwhm1mean,fwhm2mean
+  return comet[0][4],pol,sigma,sigma1,fwhm1mean,fwhm2mean
+
+def calcPol(comparmean):
+  mQ = comparmean[0][0]
+  mU = comparmean[1][0]
+  Q = comparmean[0][1]
+  U = comparmean[1][1]
+  sigmaQ = comparmean[0][2]
+  sigmaU = comparmean[1][2]
+  meanFWHM = comparmean[0][4]+comparmean[0][5]
+  meanFWHM = meanFWHM + comparmean[1][4]+comparmean[1][5]
+  meanFWHM = meanFWHM/4
+  P = math.sqrt(Q**2 + U**2)
+  sigmaP = math.sqrt(sigmaQ**2 + sigmaU**2)
+  sigmat = 28.7 * sigmaP / P
+  teta = math.atan(U/Q)
+  if Q < 0 and U > 0: teta = teta + math.pi
+  if Q < 0 and U < 0: teta = teta + math.pi
+  if Q > 0 and U < 0: teta = teta + 2 * math.pi
+  teta = math.degrees(teta)/2 - tetacam
+  if teta < 0: teta = teta + 180
+  fop = open("res"+str(date)+".dat",'w')
+  fop.write(str(0.5*(mQ+mU))+" ")
+  fop.write(str(P)+" ")
+  fop.write(str(sigmaP)+" ")
+  fop.write(str(teta)+" ")
+  fop.write(str(sigmat)+" ")
+  fop.write(str(meanFWHM)+"\n")
+  fop.close()
+  return 0
 
 def main():
-  stars = []
-  for i in range(1,N+1):
-    stars.append(process(i))
-  out(stars)
-  starsparmean = calcmean(stars)
-  
+  stars = {}
+  comet = {}
+  comparmean = []
+  for filt in ["Q","U"]:
+    stars[filt] = []
+    comet[filt] = []
+    for i in range(1,N+1):
+      stars[filt].append(process("stars"+date+filt+"rs.fts000"+str(i)+".dat"))
+    out(stars[filt],filt)
+    comet[filt].append(process("hartley"+date+filt+"rs.fts.dat"))
+    out(comet[filt],filt+"comet")
+    comparmean.append(calcmean(stars[filt],comet[filt],filt))
+  calcPol(comparmean)
+
 
 if __name__ == "__main__":
   main()
