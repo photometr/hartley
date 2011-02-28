@@ -3,8 +3,8 @@
 
 import math
 
-N = 2
-date = "9"
+N = 5
+date = "19"
 tetacam = 0
 deginpix = 0.000366
 
@@ -68,6 +68,7 @@ def process(fname):
 
 def out(stars,filt):
   fop = open(filt+".dat",'w')
+  fop.write("x1  y1  x2    y2   mag   pol   flerr    dist    ang       fwhm1      fwhm2\n")
   for output in stars:
     fop.write(str(output[0])+" ")#x1
     fop.write(str(output[1])+" ")#y1

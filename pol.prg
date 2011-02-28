@@ -1,6 +1,6 @@
 DEFINE/PARAMETER P1 + F "Enter day number:"
 DEFINE/MAXPAR 1
-DEFINE/LOCAL name/C*15/1/4
+DEFINE/LOCAL name/C*20/1/4
 DEFINE/LOCAL mean/R/1/1 0.0
 DEFINE/LOCAL stdev/R/1/1 0.0
 DEFINE/LOCAL mfwhmx/R/1/1 0.0
@@ -67,7 +67,7 @@ DO i = 1 4
 
   WRITE/OUT "Now mark pairs for the measurment"
   IF i .LT. 3 THEN !field stars
-    DO n = 1 2
+    DO n = 1 5
       CENTER/GAUS ? polapar.tbl
       MAGNIT/CIRC tmpim,polapar.tbl mag.tbl @{Fsiz},@4,@5
 
